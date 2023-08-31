@@ -1,6 +1,7 @@
 import traceback
 from selenium import webdriver
 from selenium.webdriver.support import expected_conditions as EC
+
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from queue import Queue
@@ -8,11 +9,28 @@ import sys
 
 visited_links = set()  # A set to keep track of visited links to avoid infinite loops
 
+def read_links_and_remove_duplicates(input_file, output_file):
+    # Initialize visited_links set
+    initialize_visited_links(input_file)
+
+    # Convert set to list to write to file
+    unique_links = list(visited_links)
+
+    # Write unique links to output file
+    with open(output_file, "w") as f:
+        for link in unique_links:
+            f.write(f"{link}\n")
+
+    print(f"Removed duplicates and wrote to {output_file}")
+
 def initialize_visited_links(link_file):
     try:
         with open(link_file, "r") as f:
             for line in f:
-                visited_links.add(line.strip())
+                # Extract the URL from the line
+                url = line.strip().split(" ")[-1]
+                if url.startswith('http'):
+                    visited_links.add(url)
         print("Initialized succeed: added links number: " + str(len(visited_links)))
     except FileNotFoundError:
         print("page_links.txt not found, starting with an empty set.")
@@ -20,6 +38,7 @@ def initialize_visited_links(link_file):
 def extract_urls_with_js(page_link_file, base_url):
     url_queue = Queue()
     url_queue.put(base_url)
+
 
     while not url_queue.empty():
         current_url = url_queue.get()
@@ -31,7 +50,6 @@ def extract_urls_with_js(page_link_file, base_url):
 
             # Initialize the WebDriver
             driver = webdriver.Chrome()
-
             # Navigate to the URL
             driver.get(current_url)
 
@@ -50,7 +68,7 @@ def extract_urls_with_js(page_link_file, base_url):
             # Filter links to only include those that start with the base_url
             filtered_links = [link for link in all_links if link.startswith(base_url) and link not in visited_links]
 
-            print(f"Visited: {current_url}, found {len(filtered_links)} links.")
+            print(f"Visited: {current_url}, found {len(filtered_links)} new links.")
 
             # Add each link to the queue to be visited
             for link in filtered_links:
@@ -78,6 +96,3 @@ if __name__ == "__main__":
     initialize_visited_links(page_link_file)
     extract_urls_with_js(page_link_file,base_url)
     
-    print("Found URLs:")
-    for url in visited_links:
-        print(url)
