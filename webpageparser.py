@@ -4,6 +4,7 @@ from urllib.parse import urljoin
 import os
 import re
 import time
+from markdownify import markdownify as md
 
 class WebPageParser:
     def __init__(self, base_url):
@@ -30,6 +31,10 @@ class WebPageParser:
 
         # get file name
         words = cleaned_text.split()[:3]
+
+        # Convert HTML to Markdown using markdownify
+        markdown_text = md(str(soup.body))
+
         file_name_prefix = "_".join(words)
         file_name_prefix = re.sub(r"[^a-zA-Z0-9]+", "_", file_name_prefix)
         current_dir = os.getcwd()
@@ -44,9 +49,9 @@ class WebPageParser:
         i=self.inc_count;
         self.inc_count+=1
         # Set the path to the output file
-        output_file = os.path.join(data_folder, f"{i}_{file_name_prefix}.txt")
+        output_file = os.path.join(data_folder, f"{i}_{file_name_prefix}.md")
         with open(output_file, "w") as f:
-            f.write(cleaned_text)
+            f.write(markdown_text)
 
     def extract_links(self, soup):
         links = set([urljoin(self.base_url, a['href']) for a in soup.find_all('a', href=True)])
@@ -54,9 +59,20 @@ class WebPageParser:
 
     def close(self):
         self.driver.quit()
+        
+from datetime import datetime
+import traceback
 
 if __name__ == "__main__":
     ORACLE_DOCUMENT_URL = "https://docs.oracle.com/en-us/iaas/api" 
+
+    print("Current date time: ", datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
     parser = WebPageParser(ORACLE_DOCUMENT_URL)
-    parser.parse(ORACLE_DOCUMENT_URL)
+    try:
+        parser.parse(ORACLE_DOCUMENT_URL)
+    except Exception as exc:
+        print("Exception occurred: ", exc)
+        print("Stacktrace: ")
+        traceback.print_exc()
+        print("Current date time: ", datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
     parser.close()
